@@ -1,0 +1,2 @@
+rootProject.name = "BridgeAudioTV"
+include(":app")
