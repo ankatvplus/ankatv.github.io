@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>APK Maker Studio - URL veya HTML ile APK Oluştur</title>
+    <!-- JSZip ve FileSaver kütüphaneleri (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(145deg, #0b1120 0%, #111827 100%);
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, 'Roboto', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .card {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(18, 25, 45, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.2);
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .header {
+            background: #0f172a;
+            padding: 1.8rem 2rem;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #c084fc, #60a5fa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            margin-top: 0.6rem;
+            font-size: 0.95rem;
+        }
+
+        .content {
+            padding: 2rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.8rem;
+            border-bottom: 1px solid #1e2a3e;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #94a3b8;
+            font-family: inherit;
+        }
+
+        .tab-btn.active {
+            background: #2d3a5e;
+            color: white;
+            box-shadow: 0 2px 8px rgba(96, 165, 250, 0.2);
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fade 0.25s ease;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(5px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: #0f172a;
+            border: 1px solid #2d3a5e;
+            border-radius: 1.2rem;
+            color: #f1f5f9;
+            font-size: 0.95rem;
+            font-family: 'Fira Code', monospace, 'Segoe UI';
+            transition: 0.2s;
+            resize: vertical;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
+        }
+
+        textarea {
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .info-badge {
+            background: #1e293b;
+            border-radius: 1rem;
+            padding: 0.8rem 1.2rem;
+            font-size: 0.8rem;
+            color: #a5b4fc;
+            margin: 1rem 0 1.5rem 0;
+            border-left: 4px solid #818cf8;
+        }
+
+        .btn-generate {
+            background: linear-gradient(105deg, #4f46e5, #7c3aed);
+            border: none;
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 1rem;
+            box-shadow: 0 8px 20px -8px #4f46e5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(105deg, #6366f1, #8b5cf6);
+            box-shadow: 0 12px 25px -10px #5b21b6;
+        }
+
+        .btn-generate:active {
+            transform: translateY(1px);
+        }
+
+        .status {
+            margin-top: 1.8rem;
+            padding: 1rem;
+            background: #0f172a80;
+            border-radius: 1.2rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #cbd5e6;
+            border: 1px dashed #334155;
+        }
+
+        .step-guide {
+            background: #0a0f1c;
+            border-radius: 1.2rem;
+            padding: 1rem 1.5rem;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
+        .step-guide summary {
+            font-weight: 600;
+            cursor: pointer;
+            color: #a78bfa;
+        }
+
+        .step-guide ol {
+            margin-left: 1.2rem;
+            margin-top: 0.7rem;
+        }
+
+        hr {
+            border-color: #1e293b;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 650px) {
+            body { padding: 1rem; }
+            .content { padding: 1.5rem; }
+            .tab-btn { padding: 0.5rem 1rem; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h1>📦 APK Maker Studio</h1>
+        <p>URL veya HTML kodu ile Android Studio projesi oluşturun → Kendi APK'nızı derleyin</p>
+    </div>
+    <div class="content">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="urlTab">🌍 URL (Web Sitesi)</button>
+            <button class="tab-btn" data-tab="htmlTab">📄 HTML Kodu (Yerel İçerik)</button>
+        </div>
+
+        <!-- URL TAB -->
+        <div id="urlTab" class="tab-pane active">
+            <div class="input-group">
+                <label>🔗 Uygulamanızda açılacak web sitesi URL’si</label>
+                <input type="url" id="websiteUrl" placeholder="https://ornek.com veya http://192.168.1.xx" value="https://www.example.com">
+                <div class="info-badge">
+                    ⚡ WebView ile siteyi gösteren bir Android projesi oluşturulur. İnternet izni eklenir, JavaScript etkindir.
+                </div>
+            </div>
+        </div>
+
+        <!-- HTML KOD TAB -->
+        <div id="htmlTab" class="tab-pane">
+            <div class="input-group">
+                <label>📝 Özel HTML/CSS/JS kodunuz (uygulama içinde gösterilecek)</label>
+                <textarea id="htmlCode" placeholder="<!DOCTYPE html>
+<html>
+<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Uygulamam</title><style>body{background:#0f172a;color:white;font-family:sans-serif;text-align:center;padding:2rem;}</style></head>
+<body>
+<h1>Merhaba APK!</h1>
+<p>Bu içerik doğrudan HTML kodundan oluşturuldu.</p>
+<button onclick='alert(&quot;Harika çalışıyor!&quot;)'>Tıkla</button>
+</body>
+</html>"></textarea>
+                <div class="info-badge">
+                    🎨 HTML kodunuz assets klasörüne eklenir ve WebView ile gösterilir. CSS, JS, resimler (base64 veya local) çalışır.
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-generate" id="generateBtn">
+            🚀 Android Projesi Oluştur (APK'ya Dönüştür)
+        </button>
+
+        <div class="status" id="statusMsg">
+            💡 Hazır. "Android Projesi Oluştur" butonuna bas → ZIP indir → Android Studio'da aç → APK üret.
+        </div>
+
+        <details class="step-guide">
+            <summary>📘 APK yapmak için adım adım rehber</summary>
+            <ol>
+                <li><strong>Bu araç:</strong> URL veya HTML kodunu alır, tam çalışan bir <strong>Android Studio projesi</strong> (Java + WebView) oluşturur.</li>
+                <li><strong>ZIP dosyasını indirin</strong> ve herhangi bir klasöre çıkarın.</li>
+                <li><strong>Android Studio'yu açın → "Open" →</strong> çıkardığınız klasörü seçin (AppMakerProje klasörü).</li>
+                <li>Gradle senkronizasyonunu bekleyin (internet gerekir).</li>
+                <li>Menüden <strong>Build → Build Bundle(s) / APK(s) → Build APK(s)</strong> seçeneğine tıklayın.</li>
+                <li>İşlem tamamlandığında sağ altta <strong>"locate"</strong> diyerek <strong>app/build/outputs/apk/debug/</strong> içindeki <strong>app-debug.apk</strong> dosyasını alın.</li>
+                <li>APK'nız hazır! İmzalama için release build de üretebilirsiniz.</li>
+            </ol>
+            <p style="margin-top: 8px;">✅ Bu yöntemle %100 çalışan, istediğiniz URL veya HTML içeriğini gösteren bir Android uygulaması oluşturup APK elde edersiniz.</p>
+        </details>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // Tab geçişleri
+        const tabs = document.querySelectorAll('.tab-btn');
+        const panes = {
+            urlTab: document.getElementById('urlTab'),
+            htmlTab: document.getElementById('htmlTab')
+        };
+
+        function activateTab(tabId) {
+            Object.keys(panes).forEach(id => {
+                panes[id].classList.remove('active');
+            });
+            tabs.forEach(btn => btn.classList.remove('active'));
+            panes[tabId].classList.add('active');
+            document.querySelector(`.tab-btn[data-tab="${tabId}"]`).classList.add('active');
+        }
+
+        tabs.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.getAttribute('data-tab');
+                if (tabId && panes[tabId]) activateTab(tabId);
+            });
+        });
+
+        // Proje template sabitleri (Android Studio ile uyumlu minimal yapı)
+        // Kullanıcı adı vs. dinamik değil, ama her zaman çalışır.
+        const generateProject = async (mode, urlOrHtml) => {
+            const statusDiv = document.getElementById('statusMsg');
+            statusDiv.innerHTML = "⏳ Proje oluşturuluyor, lütfen bekleyin... (Android Studio şablonu hazırlanıyor)";
+            statusDiv.style.color = "#c084fc";
+
+            try {
+                const zip = new JSZip();
+                // Kök dizin adı: AppMakerProje
+                const root = zip.folder("AppMakerProje");
+
+                // 1) settings.gradle
+                root.file("settings.gradle", `include ':app'
+rootProject.name = "WebViewAppMaker"`);
+
+                // 2) build.gradle (Project level) - basit ve güncel
+                const projectBuildGradle = `// Top-level build file where you can add configuration options common to all sub-projects/modules.
+plugins {
+    id 'com.android.application' version '8.2.0' apply false
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}
+`;
+                root.file("build.gradle", projectBuildGradle);
+
+                // 3) gradle wrapper properties (opsiyonel ama android studio için)
+                const gradleWrapperProps = `distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.2-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists`;
+                root.file("gradle/wrapper/gradle-wrapper.properties", gradleWrapperProps);
+
+                // 4) app klasörü
+                const appFolder = root.folder("app");
+
+                // app/build.gradle
+                const appBuildGradle = `plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.apkmaker.webviewapp'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.apkmaker.webviewapp"
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.webkit:webkit:1.9.0'
+}
+`;
+                appFolder.file("build.gradle", appBuildGradle);
+
+                // proguard-rules.pro (boş)
+                appFolder.file("proguard-rules.pro", "# Add project specific ProGuard rules here.");
+
+                // manifest
+                const manifest = `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.WebViewApp"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>`;
+                appFolder.file("src/main/AndroidManifest.xml", manifest);
+
+                // strings.xml
+                const strings = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WebViewAppMaker</string>
+</resources>`;
+                appFolder.file("src/main/res/values/strings.xml", strings);
+
+                // colors.xml (basit)
+                const colors = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>`;
+                appFolder.file("src/main/res/values/colors.xml", colors);
+
+                // themes.xml
+                const themes = `<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WebViewApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryVariant">@color/purple_700</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/teal_200</item>
+        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:windowBackground">@color/white</item>
+    </style>
+</resources>`;
+                appFolder.file("src/main/res/values/themes.xml", themes);
+
+                // activity_main.xml (ConstraintLayout + WebView tam ekran)
+                const activityMainXml = `<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <WebView
+        android:id="@+id/webview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>`;
+                appFolder.file("src/main/res/layout/activity_main.xml", activityMainXml);
+
+                // --- MainActivity.java (dinamik: URL veya local HTML)
+                let mainActivityCode = "";
+                if (mode === 'url') {
+                    mainActivityCode = `package com.apkmaker.webviewapp;
+
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+    private WebView webView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        webView = findViewById(R.id.webview);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setAllowFileAccess(false);
+        webSettings.setAllowContentAccess(false);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                view.loadUrl(url);
+                return true;
+            }
+        });
+
+        String targetUrl = "${escapeJavaString(urlOrHtml)}";
+        webView.loadUrl(targetUrl);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}`;
+                } 
+                else {  // HTML modu: assets/index.html oluştur, WebView file:///android_asset/index.html yükle
+                    // HTML kodunu assets klasörüne yaz
+                    const assetsFolder = appFolder.folder("src/main/assets");
+                    assetsFolder.file("index.html", urlOrHtml);  // urlOrHtml aslında HTML içeriği
+                    mainActivityCode = `package com.apkmaker.webviewapp;
+
+import android.os.Bundle;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity {
+    private WebView webView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        webView = findViewById(R.id.webview);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url.startsWith("file://") || url.startsWith("http://") || url.startsWith("https://")) {
+                    view.loadUrl(url);
+                } else {
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        // Yerel HTML dosyasını assets'ten yükle
+        webView.loadUrl("file:///android_asset/index.html");
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
+        }
+    }
+}`;
+                }
+
+                // Java kodunu src klasörüne yaz
+                appFolder.file("src/main/java/com/apkmaker/webviewapp/MainActivity.java", mainActivityCode);
+
+                // Boş bir gitignore vb. gereksiz ama stabilite için placeholder drawable veya mipmap oluştur (android studio icon eksikliği için basit xml drawable)
+                const icLauncherXml = `<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/purple_500"/>
+    <foreground android:drawable="@android:drawable/ic_menu_view" />
+</adaptive-icon>`;
+                // Mipmap klasörleri oluştur (eksik ikon için fallback)
+                const mipmapHdpi = appFolder.folder("src/main/res/mipmap-hdpi");
+                const mipmapMdpi = appFolder.folder("src/main/res/mipmap-mdpi");
+                const mipmapXhdpi = appFolder.folder("src/main/res/mipmap-xhdpi");
+                const mipmapXxhdpi = appFolder.folder("src/main/res/mipmap-xxhdpi");
+                const mipmapXxxhdpi = appFolder.folder("src/main/res/mipmap-xxxhdpi");
+                // dummy bir xml ikon (aslında manifest ic_launcher gerekiyor, ancak android default icon kullanılabilmesi için resim eklemiyoruz ama renk kullanılsın)
+                // Basitçe bir ic_launcher.xml oluşturalım drawable içinde
+                const drawableFolder = appFolder.folder("src/main/res/drawable");
+                drawableFolder.file("ic_launcher.xml", icLauncherXml);
+                // manifest ic_launcher referansı için mipmap herhangi bir png yoksa da hata vermez? çalıştırır ama uyarı verir. Daha temiz: mipmap-anydpi-v26 içine xml koy
+                const anydpi = appFolder.folder("src/main/res/mipmap-anydpi-v26");
+                anydpi.file("ic_launcher.xml", icLauncherXml);
+                anydpi.file("ic_launcher_round.xml", icLauncherXml);
+                
+                // Ayrıca default bir string array vs yok. proje tamamen işlevsel.
+
+                // Bir gradle properties dosyası ekleyelim (root)
+                const gradleProps = `org.gradle.jvmargs=-Xmx2048m
+android.useAndroidX=true
+android.enableJetifier=true
+`;
+                root.file("gradle.properties", gradleProps);
+                
+                // local.properties boş bırak (android studio kendi oluşturur)
+                root.file("local.properties", "# This file is automatically generated by Android Studio");
+
+                // Zip'i oluştur ve indir
+                const zipBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+                const fileName = mode === 'url' ? "WebViewApp_URL_Project.zip" : "WebViewApp_HTML_Project.zip";
+                saveAs(zipBlob, fileName);
+                statusDiv.innerHTML = `✅ Proje başarıyla oluşturuldu! <strong>${fileName}</strong> indirildi. Android Studio'da açıp Build -> Build APK ile APK'nızı oluşturun. 🚀`;
+                statusDiv.style.color = "#86efac";
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerHTML = `❌ Hata: ${err.message || "Proje oluşturulamadı. Lütfen geçerli URL veya HTML kodu girin."}`;
+                statusDiv.style.color = "#f87171";
+            }
+        };
+
+        // Java string kaçışı
+        function escapeJavaString(str) {
+            return str.replace(/\\/g, "\\\\").replace(/"/g, "\\\"").replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+        }
+
+        // Buton tetikleyici
+        const generateBtn = document.getElementById('generateBtn');
+        generateBtn.addEventListener('click', () => {
+            const activeTab = document.querySelector('.tab-pane.active').id;
+            if (activeTab === 'urlTab') {
+                let urlInput = document.getElementById('websiteUrl').value.trim();
+                if (!urlInput) {
+                    document.getElementById('statusMsg').innerHTML = "⚠️ Lütfen geçerli bir URL girin (http:// veya https:// ile başlamalı).";
+                    document.getElementById('statusMsg').style.color = "#fbbf24";
+                    return;
+                }
+                if (!urlInput.startsWith('http://') && !urlInput.startsWith('https://')) {
+                    urlInput = 'https://' + urlInput;
+                }
+                generateProject('url', urlInput);
+            } 
+            else {
+                let htmlContent = document.getElementById('htmlCode').value;
+                if (!htmlContent.trim()) {
+                    document.getElementById('statusMsg').innerHTML = "⚠️ HTML kodu alanı boş olamaz. Örnek bir içerik girin.";
+                    document.getElementById('statusMsg').style.color = "#fbbf24";
+                    return;
+                }
+                // HTML içeriğini olduğu gibi kullan, UTF-8
+                generateProject('html', htmlContent);
+            }
+        });
+
+        // Demo ön izleme: örnek html dolu.
+        const defaultHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>APK Maker Demo</title>
+    <style>
+        body { font-family: system-ui; background: linear-gradient(135deg,#0f172a,#1e293b); color: white; text-align: center; padding: 2rem; margin:0; }
+        .card { background: #2d3748; border-radius: 2rem; padding: 2rem; max-width: 500px; margin: 2rem auto; }
+        button { background: #7c3aed; border: none; padding: 12px 24px; border-radius: 40px; color: white; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🎉 HTML'den APK</h1>
+    <p>Bu uygulama özel HTML kodunuz ile oluşturuldu.</p>
+    <button onclick="alert('WebView çalışıyor! 🚀')">Merhaba Dünya</button>
+    <p style="margin-top:20px; font-size:12px;">Gömülü stil & JS tam destek</p>
+</div>
+</body>
+</html>`;
+        document.getElementById('htmlCode').value = defaultHtml;
+    })();
+</script>
+</body>
+</html>
